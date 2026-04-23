@@ -98,27 +98,29 @@ def escaneo(tipo):
 @app.route('/lista_empleados')
 def lista_empleados():
     if 'usuario' not in session: return redirect(url_for('index'))
-    # Permitir acceso a Maestro y Administrador de Corporación
-    if session.get('rol') not in ['maestro', 'admin_corp']: 
-        return redirect(url_for('panel'))
+    if session.get('rol') not in ['maestro', 'admin_corp']: return redirect(url_for('panel'))
     
-    sup_filtro = request.args.get('supervisor') # Capturamos el filtro de la URL
+    sup_filtro = request.args.get('supervisor')
     conn = get_db_connection()
     
-    # Obtenemos la lista de todos los supervisores para llenar el menú desplegable
-    lista_sups = conn.execute('SELECT DISTINCT usuario FROM supervisores ORDER BY usuario ASC').fetchall()
+    # NUEVA CONSULTA: Trae el nombre del supervisor y la cantidad de empleados que tiene
+    lista_sups = conn.execute('''
+        SELECT s.usuario, COUNT(e.dni) as cantidad 
+        FROM supervisores s 
+        LEFT JOIN empleados e ON s.id = e.supervisor_id 
+        GROUP BY s.usuario 
+        ORDER BY s.usuario ASC
+    ''').fetchall()
     
     if sup_filtro:
-        # Filtramos por el supervisor seleccionado
         empleados = conn.execute('''
             SELECT e.*, s.usuario as supervisor 
             FROM empleados e 
             JOIN supervisores s ON e.supervisor_id = s.id 
-            WHERE s.usuario = ?
+            WHERE s.usuario = ? 
             ORDER BY e.apellido ASC
         ''', (sup_filtro,)).fetchall()
     else:
-        # Si no hay filtro, mostramos todos como antes
         empleados = conn.execute('''
             SELECT e.*, s.usuario as supervisor 
             FROM empleados e 
