@@ -141,3 +141,21 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True)
+    # --- NUEVA RUTA PARA ELIMINAR USUARIOS (SOLO MAESTRO) ---
+@app.route('/eliminar_usuario/<int:id>', methods=['POST'])
+def eliminar_usuario(id):
+    if session.get('rol') != 'maestro': return redirect(url_for('panel'))
+    
+    conn = get_db_connection()
+    # Buscamos al usuario para verificar que no se borre a sí mismo
+    user_to_delete = conn.execute('SELECT * FROM supervisores WHERE id = ?', (id,)).fetchone()
+    
+    if user_to_delete and user_to_delete['usuario'] != session['usuario']:
+        conn.execute('DELETE FROM supervisores WHERE id = ?', (id,))
+        conn.commit()
+        flash(f'Usuario "{user_to_delete["usuario"]}" eliminado correctamente', 'warning')
+    else:
+        flash('No puedes eliminar tu propia cuenta de administrador', 'danger')
+        
+    conn.close()
+    return redirect(url_for('gestion_usuarios'))

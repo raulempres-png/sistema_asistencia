@@ -35,35 +35,56 @@
             </div>
 
             <div class="col-md-8">
-                <div class="card shadow-sm p-4">
-                    <h5 class="fw-bold mb-3">Usuarios Activos en el Sistema</h5>
-                    <table class="table table-hover align-middle">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>Usuario</th>
-                                <th>Rol asignado</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for u in users %}
-                            <tr>
-                                <td class="fw-bold">{{ u['usuario'] }}</td>
-                                <td>
-                                    {% if u['rol'] == 'maestro' %}
-                                        <span class="badge bg-danger">Maestro</span>
-                                    {% elif u['rol'] == 'supervisor' %}
-                                        <span class="badge bg-primary">Supervisor</span>
-                                    {% else %}
-                                        <span class="badge bg-success">Guardián</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    <a href="/panel" class="btn btn-secondary w-100 mt-2">Volver al Panel Principal</a>
-                </div>
-            </div>
+    <div class="card shadow-sm p-4">
+        <h5 class="fw-bold mb-3">Usuarios Activos en el Sistema</h5>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Usuario</th>
+                    <th>Rol asignado</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td class="fw-bold">{{ u['usuario'] }}</td>
+                    <td>
+                        {% if u['rol'] == 'maestro' %}
+                            <span class="badge bg-danger">Maestro</span>
+                        {% elif u['rol'] == 'supervisor' %}
+                            <span class="badge bg-primary">Supervisor</span>
+                        {% else %}
+                            <span class="badge bg-success">Guardián</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if u['usuario'] != session['usuario'] %}
+                        <form action="/eliminar_usuario/{{ u['id'] }}" method="POST" onsubmit="return confirm('¿Está seguro de eliminar este acceso?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-trash"></i> Eliminar
+                            </button>
+                        </form>
+                        {% else %}
+                        <small class="text-muted italic">Tu cuenta</small>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <a href="/panel" class="btn btn-secondary w-100 mt-2">Volver al Panel Principal</a>
+    </div>
+</div>
         </div>
     </div>
 </body>
