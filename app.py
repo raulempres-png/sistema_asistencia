@@ -102,15 +102,36 @@ def lista_empleados():
     if session.get('rol') not in ['maestro', 'admin_corp']: 
         return redirect(url_for('panel'))
     
+    sup_filtro = request.args.get('supervisor') # Capturamos el filtro de la URL
     conn = get_db_connection()
-    empleados = conn.execute('''
-        SELECT e.*, s.usuario as supervisor 
-        FROM empleados e 
-        JOIN supervisores s ON e.supervisor_id = s.id 
-        ORDER BY e.apellido ASC
-    ''').fetchall()
+    
+    # Obtenemos la lista de todos los supervisores para llenar el menú desplegable
+    lista_sups = conn.execute('SELECT DISTINCT usuario FROM supervisores ORDER BY usuario ASC').fetchall()
+    
+    if sup_filtro:
+        # Filtramos por el supervisor seleccionado
+        empleados = conn.execute('''
+            SELECT e.*, s.usuario as supervisor 
+            FROM empleados e 
+            JOIN supervisores s ON e.supervisor_id = s.id 
+            WHERE s.usuario = ?
+            ORDER BY e.apellido ASC
+        ''', (sup_filtro,)).fetchall()
+    else:
+        # Si no hay filtro, mostramos todos como antes
+        empleados = conn.execute('''
+            SELECT e.*, s.usuario as supervisor 
+            FROM empleados e 
+            JOIN supervisores s ON e.supervisor_id = s.id 
+            ORDER BY e.apellido ASC
+        ''').fetchall()
+        
     conn.close()
-    return render_template('lista_empleados.html', empleados=empleados, rol=session['rol'])
+    return render_template('lista_empleados.html', 
+                           empleados=empleados, 
+                           rol=session['rol'], 
+                           supervisores=lista_sups, 
+                           sup_sel=sup_filtro)
 
 @app.route('/eliminar_empleado/<dni>', methods=['POST'])
 def eliminar_empleado(dni):
@@ -139,7 +160,7 @@ def asistencia_log():
     ''', (fecha_filtro,)).fetchall()
     conn.close()
     return render_template('asistencia_log.html', registros=registros, fecha_sel=fecha_filtro)
-    
+
 @app.route('/reportes')
 def reportes():
     if session.get('rol') != 'maestro': return redirect(url_for('panel'))
