@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Historial de Asistencia</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold">Historial Diario de Asistencia</h2>
+            <form class="d-flex gap-2">
+                <input type="date" name="fecha" class="form-control" value="{{ fecha_sel }}">
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+            </form>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-striped align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Hora Exacta</th>
+                            <th>DNI</th>
+                            <th>Empleado</th>
+                            <th>Contrata</th>
+                            <th>Movimiento</th>
+                            <th>Estado / Observación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in registros %}
+                        <tr>
+                            <td>{{ r['fecha_hora'].split(' ')[1] }}</td>
+                            <td>{{ r['dni'] }}</td>
+                            <td class="fw-bold">{{ r['nombre'] }} {{ r['apellido'] }}</td>
+                            <td>{{ r['contrata'] }}</td>
+                            <td>
+                                <span class="badge {% if r['tipo_movimiento'] == 'INGRESO' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                    {{ r['tipo_movimiento'] }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge {% if r['estado'] == 'OK' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                    {{ r['estado'] }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="text-center py-5 text-muted">No hay registros para la fecha seleccionada.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <a href="/panel" class="btn btn-secondary mt-4">Volver al Panel Principal</a>
+    </div>
+</body>
+</html>
