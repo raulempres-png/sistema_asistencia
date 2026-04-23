@@ -10,8 +10,8 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-# Función para la nube: PythonAnywhere usa UTC, por lo que restamos 5 horas para Perú
 def get_peru_time():
+    # Ajuste para la nube (UTC-5)
     return datetime.utcnow() - timedelta(hours=5)
 
 @app.route('/')
@@ -36,9 +36,13 @@ def panel():
     if 'usuario' not in session: return redirect(url_for('index'))
     return render_template('panel.html', rol=session['rol'], usuario=session['usuario'])
 
+# --- RUTA PARA SUPERVISORES Y MAESTROS ---
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if 'usuario' not in session: return redirect(url_for('index'))
+    # Solo Supervisor o Maestro pueden registrar
+    if session['rol'] not in ['supervisor', 'maestro']: return redirect(url_for('panel'))
+    
     if request.method == 'POST':
         dni = request.form['dni']; nombre = request.form['nombre']
         apellido = request.form['apellido']; contrata = request.form['contrata']
@@ -53,9 +57,34 @@ def registro():
         return redirect(url_for('registro'))
     return render_template('registro.html', usuario=session['usuario'])
 
+# --- RUTA PARA GUARDIANES Y MAESTROS ---
+@app.route('/escaneo/<tipo>', methods=['GET', 'POST'])
+def escaneo(tipo):
+    if 'usuario' not in session: return redirect(url_for('index'))
+    # Solo Guardián o Maestro pueden escanear
+    if session['rol'] not in ['guardian', 'maestro']: return redirect(url_for('panel'))
+    
+    mensaje = None; estado_alerta = None
+    if request.method == 'POST':
+        dni = request.form['dni']
+        conn = get_db_connection()
+        emp = conn.execute('SELECT * FROM empleados WHERE dni = ?', (dni,)).fetchone()
+        if emp:
+            ahora = get_peru_time()
+            estado = "OK"
+            if tipo.upper() == "INGRESO" and ahora.hour >= 8: estado = "OBSERVADO - TARDE"
+            conn.execute('INSERT INTO registros (dni_empleado, tipo_movimiento, estado, fecha_hora) VALUES (?, ?, ?, ?)', 
+                         (dni, tipo.upper(), estado, ahora.strftime('%Y-%m-%d %H:%M:%S')))
+            conn.commit()
+            mensaje = f"{emp['nombre']} - {estado}"; estado_alerta = 'success' if estado == "OK" else 'warning'
+        else: mensaje = "DNI no registrado"; estado_alerta = 'danger'
+        conn.close()
+    return render_template('escaneo.html', tipo=tipo.upper(), mensaje=mensaje, estado_alerta=estado_alerta)
+
+# --- RUTAS EXCLUSIVAS DEL MAESTRO ---
 @app.route('/lista_empleados')
 def lista_empleados():
-    if 'usuario' not in session: return redirect(url_for('index'))
+    if session.get('rol') != 'maestro': return redirect(url_for('panel'))
     conn = get_db_connection()
     empleados = conn.execute('''
         SELECT e.*, s.usuario as supervisor 
@@ -68,15 +97,13 @@ def lista_empleados():
 
 @app.route('/asistencia_log')
 def asistencia_log():
-    if 'usuario' not in session or session['rol'] != 'maestro': return redirect(url_for('panel'))
+    if session.get('rol') != 'maestro': return redirect(url_for('panel'))
     fecha_filtro = request.args.get('fecha', get_peru_time().strftime('%Y-%m-%d'))
     conn = get_db_connection()
     registros = conn.execute('''
         SELECT r.fecha_hora, e.nombre, e.apellido, e.dni, e.contrata, r.tipo_movimiento, r.estado
-        FROM registros r
-        JOIN empleados e ON r.dni_empleado = e.dni
-        WHERE date(r.fecha_hora) = ?
-        ORDER BY r.fecha_hora DESC
+        FROM registros r JOIN empleados e ON r.dni_empleado = e.dni
+        WHERE date(r.fecha_hora) = ? ORDER BY r.fecha_hora DESC
     ''', (fecha_filtro,)).fetchall()
     conn.close()
     return render_template('asistencia_log.html', registros=registros, fecha_sel=fecha_filtro)
@@ -106,26 +133,6 @@ def gestion_usuarios():
     users = conn.execute('SELECT * FROM supervisores').fetchall()
     conn.close()
     return render_template('gestion_usuarios.html', users=users)
-
-@app.route('/escaneo/<tipo>', methods=['GET', 'POST'])
-def escaneo(tipo):
-    if 'usuario' not in session: return redirect(url_for('index'))
-    mensaje = None; estado_alerta = None
-    if request.method == 'POST':
-        dni = request.form['dni']
-        conn = get_db_connection()
-        emp = conn.execute('SELECT * FROM empleados WHERE dni = ?', (dni,)).fetchone()
-        if emp:
-            ahora = get_peru_time()
-            estado = "OK"
-            if tipo.upper() == "INGRESO" and ahora.hour >= 8: estado = "OBSERVADO - TARDE"
-            conn.execute('INSERT INTO registros (dni_empleado, tipo_movimiento, estado, fecha_hora) VALUES (?, ?, ?, ?)', 
-                         (dni, tipo.upper(), estado, ahora.strftime('%Y-%m-%d %H:%M:%S')))
-            conn.commit()
-            mensaje = f"{emp['nombre']} - {estado}"; estado_alerta = 'success' if estado == "OK" else 'warning'
-        else: mensaje = "DNI no registrado"; estado_alerta = 'danger'
-        conn.close()
-    return render_template('escaneo.html', tipo=tipo.upper(), mensaje=mensaje, estado_alerta=estado_alerta)
 
 @app.route('/logout')
 def logout():
