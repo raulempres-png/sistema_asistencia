@@ -21,6 +21,7 @@
                 <div class="card shadow-sm h-100">
                     <div class="card-body text-center">
                         <h5>Añadir Empleados</h5>
+                        <p class="small text-muted">Registro de personal nuevo con fotografía.</p>
                         <a href="/registro" class="btn btn-outline-primary w-100">Registrar</a>
                     </div>
                 </div>
@@ -46,11 +47,12 @@
             </div>
             {% endif %}
 
-            {% if rol == 'maestro' %}
+            {% if rol in ['maestro', 'admin_corp'] %}
             <div class="col-md-4 mb-3">
                 <div class="card shadow-sm h-100">
                     <div class="card-body text-center">
                         <h5>Ver Directorio</h5>
+                        <p class="small text-muted">Base de datos de personal y fotos.</p>
                         <a href="/lista_empleados" class="btn btn-outline-dark w-100">Ver Personal</a>
                     </div>
                 </div>
@@ -59,14 +61,19 @@
                 <div class="card shadow-sm h-100 border-info">
                     <div class="card-body text-center">
                         <h5 class="text-info">Historial Diario</h5>
+                        <p class="small text-muted">Reporte detallado de marcaciones.</p>
                         <a href="/asistencia_log" class="btn btn-info w-100 text-white">Ver Registros</a>
                     </div>
                 </div>
             </div>
+            {% endif %}
+
+            {% if rol == 'maestro' %}
             <div class="col-md-4 mb-3">
                 <div class="card shadow-sm h-100 bg-dark text-white">
                     <div class="card-body text-center">
                         <h5>Dashboard Analítico</h5>
+                        <p class="small text-light">Métricas generales de asistencia.</p>
                         <a href="/reportes" class="btn btn-light w-100">Ver Gráficos</a>
                     </div>
                 </div>
@@ -75,6 +82,7 @@
                 <div class="card shadow-sm h-100 border-warning">
                     <div class="card-body text-center">
                         <h5 class="text-warning">Gestión de Usuarios</h5>
+                        <p class="small text-muted">Control de accesos y roles.</p>
                         <a href="/gestion_usuarios" class="btn btn-warning w-100 text-dark">Administrar Cuentas</a>
                     </div>
                 </div>

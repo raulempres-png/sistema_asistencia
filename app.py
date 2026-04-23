@@ -97,9 +97,18 @@ def escaneo(tipo):
 
 @app.route('/lista_empleados')
 def lista_empleados():
-    if session.get('rol') != 'maestro': return redirect(url_for('panel'))
+    if 'usuario' not in session: return redirect(url_for('index'))
+    # Permitir acceso a Maestro y Administrador de Corporación
+    if session.get('rol') not in ['maestro', 'admin_corp']: 
+        return redirect(url_for('panel'))
+    
     conn = get_db_connection()
-    empleados = conn.execute('SELECT e.*, s.usuario as supervisor FROM empleados e JOIN supervisores s ON e.supervisor_id = s.id ORDER BY e.apellido ASC').fetchall()
+    empleados = conn.execute('''
+        SELECT e.*, s.usuario as supervisor 
+        FROM empleados e 
+        JOIN supervisores s ON e.supervisor_id = s.id 
+        ORDER BY e.apellido ASC
+    ''').fetchall()
     conn.close()
     return render_template('lista_empleados.html', empleados=empleados, rol=session['rol'])
 
@@ -116,7 +125,11 @@ def eliminar_empleado(dni):
 
 @app.route('/asistencia_log')
 def asistencia_log():
-    if session.get('rol') != 'maestro': return redirect(url_for('panel'))
+    if 'usuario' not in session: return redirect(url_for('index'))
+    # Permitir acceso a Maestro y Administrador de Corporación
+    if session.get('rol') not in ['maestro', 'admin_corp']: 
+        return redirect(url_for('panel'))
+    
     fecha_filtro = request.args.get('fecha', get_peru_time().strftime('%Y-%m-%d'))
     conn = get_db_connection()
     registros = conn.execute('''
@@ -126,7 +139,7 @@ def asistencia_log():
     ''', (fecha_filtro,)).fetchall()
     conn.close()
     return render_template('asistencia_log.html', registros=registros, fecha_sel=fecha_filtro)
-
+    
 @app.route('/reportes')
 def reportes():
     if session.get('rol') != 'maestro': return redirect(url_for('panel'))
