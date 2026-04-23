@@ -27,16 +27,6 @@
             </div>
 
             <div class="col-md-4 mb-3">
-                <div class="card shadow-sm h-100">
-                    <div class="card-body text-center">
-                        <h5>Ver Directorio</h5>
-                        <p class="small text-muted">Ficha técnica sin horarios.</p>
-                        <a href="/lista_empleados" class="btn btn-outline-dark w-100">Ver Personal</a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-4 mb-3">
                 <div class="card shadow-sm h-100 border-primary">
                     <div class="card-body text-center">
                         <h5 class="text-primary">Escáner de INGRESO</h5>
@@ -55,6 +45,16 @@
             </div>
 
             {% if rol == 'maestro' %}
+            <div class="col-md-4 mb-3">
+                <div class="card shadow-sm h-100 border-dark">
+                    <div class="card-body text-center">
+                        <h5>Ver Directorio</h5>
+                        <p class="small text-muted">Ficha técnica sin horarios.</p>
+                        <a href="/lista_empleados" class="btn btn-outline-dark w-100">Ver Personal</a>
+                    </div>
+                </div>
+            </div>
+
             <div class="col-md-4 mb-3">
                 <div class="card shadow-sm h-100 border-info">
                     <div class="card-body text-center">
