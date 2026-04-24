@@ -47,12 +47,15 @@ def panel():
     if 'usuario' not in session: return redirect(url_for('index'))
     return render_template('panel.html', rol=session['rol'], usuario=session['usuario'])
 
+# --- REGISTRO ACTUALIZADO CON CATEGORÍA (EMPLEADO / TELETRAM) ---
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if 'usuario' not in session or session['rol'] not in ['supervisor', 'maestro']: return redirect(url_for('panel'))
     if request.method == 'POST':
         dni = request.form['dni']; nombre = request.form['nombre']
         apellido = request.form['apellido']; contrata = request.form['contrata']
+        categoria = request.form.get('categoria', 'EMPLEADO') 
+        
         filename_db = 'default_user.png'
         if 'foto' in request.files:
             file = request.files['foto']
@@ -61,16 +64,56 @@ def registro():
                 filename = secure_filename(f"{dni}.{extension}")
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 filename_db = filename
+        
         conn = get_db_connection()
         try:
-            conn.execute('INSERT INTO empleados (dni, nombre, apellido, contrata, supervisor_id, foto) VALUES (?, ?, ?, ?, ?, ?)',
-                         (dni, nombre, apellido, contrata, session['user_id'], filename_db))
+            conn.execute('INSERT INTO empleados (dni, nombre, apellido, contrata, supervisor_id, foto, categoria) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                         (dni, nombre, apellido, contrata, session['user_id'], filename_db, categoria))
             conn.commit()
-            flash('Empleado registrado exitosamente', 'success')
+            flash(f'{categoria.capitalize()} registrado exitosamente', 'success')
         except: flash('Error: El DNI ya existe', 'danger')
         finally: conn.close()
         return redirect(url_for('registro'))
     return render_template('registro.html', usuario=session['usuario'])
+
+# --- LISTA DE CONSULTA PARA SUPERVISORES (MIS EMPLEADOS) ---
+@app.route('/mis_empleados')
+def mis_empleados():
+    if 'usuario' not in session or session['rol'] != 'supervisor': return redirect(url_for('panel'))
+    conn = get_db_connection()
+    empleados = conn.execute('SELECT * FROM empleados WHERE supervisor_id = ? ORDER BY apellido ASC', (session['user_id'],)).fetchall()
+    conn.close()
+    return render_template('supervisor_lista.html', empleados=empleados)
+
+# --- REPORTE DE SEGURIDAD: PERSONAL EN INTERIOR MINA ---
+@app.route('/control_mina')
+def control_mina():
+    if 'usuario' not in session or session['rol'] not in ['guardian', 'maestro', 'admin_corp']: return redirect(url_for('panel'))
+    conn = get_db_connection()
+    # Buscamos personal cuyo último movimiento sea 'INGRESO'
+    dentro = conn.execute('''
+        SELECT e.nombre, e.apellido, e.dni, e.contrata, e.foto, e.categoria, MAX(r.fecha_hora) as ultima_marcacion
+        FROM empleados e
+        JOIN registros r ON e.dni = r.dni_empleado
+        GROUP BY e.dni
+        HAVING r.tipo_movimiento = 'INGRESO'
+        ORDER BY ultima_marcacion DESC
+    ''').fetchall()
+    conn.close()
+    return render_template('control_mina.html', dentro=dentro)
+
+# --- VALIDADOR INDIVIDUAL (PARA EMPRESAS / ADMIN CORP) ---
+@app.route('/validar_personal', methods=['GET', 'POST'])
+def validar_personal():
+    if 'usuario' not in session or session['rol'] not in ['admin_corp', 'maestro']: return redirect(url_for('panel'))
+    empleado = None
+    if request.method == 'POST':
+        dni = request.form['dni']
+        conn = get_db_connection()
+        empleado = conn.execute('SELECT * FROM empleados WHERE dni = ?', (dni,)).fetchone()
+        conn.close()
+        if not empleado: flash('DNI no encontrado', 'warning')
+    return render_template('validar_dni.html', empleado=empleado)
 
 @app.route('/escaneo/<tipo>', methods=['GET', 'POST'])
 def escaneo(tipo):
@@ -93,66 +136,23 @@ def escaneo(tipo):
         conn.close()
     return render_template('escaneo.html', tipo=tipo.upper(), mensaje=mensaje, estado_alerta=estado_alerta, empleado=empleado_datos)
 
-# --- RUTAS DE ADMINISTRACIÓN (Las que faltaban) ---
-
 @app.route('/lista_empleados')
 def lista_empleados():
     if 'usuario' not in session: return redirect(url_for('index'))
     if session.get('rol') not in ['maestro', 'admin_corp']: return redirect(url_for('panel'))
-    
     sup_filtro = request.args.get('supervisor')
     conn = get_db_connection()
-    
-    # NUEVA CONSULTA: Trae el nombre del supervisor y la cantidad de empleados que tiene
-    lista_sups = conn.execute('''
-        SELECT s.usuario, COUNT(e.dni) as cantidad 
-        FROM supervisores s 
-        LEFT JOIN empleados e ON s.id = e.supervisor_id 
-        GROUP BY s.usuario 
-        ORDER BY s.usuario ASC
-    ''').fetchall()
-    
+    lista_sups = conn.execute('SELECT s.usuario, COUNT(e.dni) as cantidad FROM supervisores s LEFT JOIN empleados e ON s.id = e.supervisor_id GROUP BY s.usuario ORDER BY s.usuario ASC').fetchall()
     if sup_filtro:
-        empleados = conn.execute('''
-            SELECT e.*, s.usuario as supervisor 
-            FROM empleados e 
-            JOIN supervisores s ON e.supervisor_id = s.id 
-            WHERE s.usuario = ? 
-            ORDER BY e.apellido ASC
-        ''', (sup_filtro,)).fetchall()
+        empleados = conn.execute('SELECT e.*, s.usuario as supervisor FROM empleados e JOIN supervisores s ON e.supervisor_id = s.id WHERE s.usuario = ? ORDER BY e.apellido ASC', (sup_filtro,)).fetchall()
     else:
-        empleados = conn.execute('''
-            SELECT e.*, s.usuario as supervisor 
-            FROM empleados e 
-            JOIN supervisores s ON e.supervisor_id = s.id 
-            ORDER BY e.apellido ASC
-        ''').fetchall()
-        
+        empleados = conn.execute('SELECT e.*, s.usuario as supervisor FROM empleados e JOIN supervisores s ON e.supervisor_id = s.id ORDER BY e.apellido ASC').fetchall()
     conn.close()
-    return render_template('lista_empleados.html', 
-                           empleados=empleados, 
-                           rol=session['rol'], 
-                           supervisores=lista_sups, 
-                           sup_sel=sup_filtro)
-
-@app.route('/eliminar_empleado/<dni>', methods=['POST'])
-def eliminar_empleado(dni):
-    if session.get('rol') != 'maestro': return redirect(url_for('panel'))
-    conn = get_db_connection()
-    conn.execute('DELETE FROM registros WHERE dni_empleado = ?', (dni,))
-    conn.execute('DELETE FROM empleados WHERE dni = ?', (dni,))
-    conn.commit()
-    conn.close()
-    flash('Empleado e historial eliminados', 'warning')
-    return redirect(url_for('lista_empleados'))
+    return render_template('lista_empleados.html', empleados=empleados, rol=session['rol'], supervisores=lista_sups, sup_sel=sup_filtro)
 
 @app.route('/asistencia_log')
 def asistencia_log():
-    if 'usuario' not in session: return redirect(url_for('index'))
-    # Permitir acceso a Maestro y Administrador de Corporación
-    if session.get('rol') not in ['maestro', 'admin_corp']: 
-        return redirect(url_for('panel'))
-    
+    if 'usuario' not in session or session.get('rol') not in ['maestro', 'admin_corp']: return redirect(url_for('panel'))
     fecha_filtro = request.args.get('fecha', get_peru_time().strftime('%Y-%m-%d'))
     conn = get_db_connection()
     registros = conn.execute('''
@@ -169,10 +169,9 @@ def reportes():
     conn = get_db_connection()
     stats = conn.execute("SELECT COUNT(*) as total, SUM(CASE WHEN estado='OK' THEN 1 ELSE 0 END) as ok, SUM(CASE WHEN estado LIKE 'OBS%' THEN 1 ELSE 0 END) as obs FROM registros").fetchone()
     obs_contrata = conn.execute("SELECT e.contrata, COUNT(*) as total FROM registros r JOIN empleados e ON r.dni_empleado=e.dni WHERE r.estado LIKE 'OBS%' GROUP BY 1 ORDER BY total DESC").fetchall()
-    obs_sup = conn.execute("SELECT s.usuario, COUNT(*) as total FROM registros r JOIN empleados e ON r.dni_empleado=e.dni JOIN supervisores s ON e.supervisor_id=s.id WHERE r.estado LIKE 'OBS%' GROUP BY 1 ORDER BY total DESC").fetchall()
     top = conn.execute("SELECT e.nombre || ' ' || e.apellido as n, COUNT(*) as t FROM registros r JOIN empleados e ON r.dni_empleado=e.dni WHERE r.estado LIKE 'OBS%' GROUP BY 1 ORDER BY t DESC LIMIT 5").fetchall()
     conn.close()
-    return render_template('reportes.html', stats=stats, obs_contrata=obs_contrata, obs_supervisor=obs_sup, top_empleados=top)
+    return render_template('reportes.html', stats=stats, obs_contrata=obs_contrata, top_empleados=top)
 
 @app.route('/gestion_usuarios', methods=['GET', 'POST'])
 def gestion_usuarios():
@@ -198,7 +197,6 @@ def eliminar_usuario(id):
         conn.execute('DELETE FROM supervisores WHERE id = ?', (id,))
         conn.commit()
         flash(f'Usuario "{user_to_delete["usuario"]}" eliminado', 'warning')
-    else: flash('Acción no permitida', 'danger')
     conn.close()
     return redirect(url_for('gestion_usuarios'))
 

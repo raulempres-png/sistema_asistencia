@@ -41,7 +41,13 @@
                         <label class="form-label fw-bold">Contrata / Empresa</label>
                         <input type="text" name="contrata" class="form-control" placeholder="Ej: Trexcel Soluciones">
                     </div>
-                    
+                    <div class="mb-3">
+    <label class="form-label fw-bold">Tipo de Personal</label>
+    <select name="categoria" class="form-select" required>
+        <option value="EMPLEADO">Empleado Regular</option>
+        <option value="TELETRAM">Operador de Teletram (Externo)</option>
+    </select>
+</div>
                     <button type="submit" class="btn btn-primary w-100 fw-bold">Registrar Empleado</button>
                     <a href="/panel" class="btn btn-link w-100 mt-2 text-decoration-none text-muted">Volver al Panel</a>
                 </form>

@@ -2,27 +2,46 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Panel | Trexcel</title>
+    <title>Panel de Control | Bocamina Balcón de Oro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 </head>
 <body class="bg-light">
     <nav class="navbar navbar-dark bg-dark mb-4">
         <div class="container">
-            <a class="navbar-brand" href="#">Trexcel Soluciones</a>
-            <span class="navbar-text text-white">Usuario: {{ usuario }} | <a href="/logout" class="text-danger fw-bold">Salir</a></span>
+            <a class="navbar-brand fw-bold" href="#">BOCAMINA BALCÓN DE ORO</a>
+            <span class="navbar-text text-white">
+                <i class="bi bi-person-circle"></i> {{ usuario }} ({{ rol | capitalize }}) | 
+                <a href="/logout" class="text-danger fw-bold text-decoration-none ms-2">Salir</a>
+            </span>
         </div>
     </nav>
+
     <div class="container">
         <div class="row">
-            <div class="col-12"><h4 class="mb-4 text-secondary">Panel de {{ rol | capitalize }}</h4></div>
+            <div class="col-12"><h4 class="mb-4 text-secondary">Panel de Operaciones</h4></div>
             
             {% if rol in ['supervisor', 'maestro'] %}
             <div class="col-md-4 mb-3">
+                <div class="card shadow-sm h-100 border-primary">
+                    <div class="card-body text-center">
+                        <i class="bi bi-person-plus fs-1 text-primary"></i>
+                        <h5 class="mt-2">Añadir Personal</h5>
+                        <p class="small text-muted">Registrar empleados y Operadores de Teletram.</p>
+                        <a href="/registro" class="btn btn-primary w-100">Registrar Nuevo</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if rol == 'supervisor' %}
+            <div class="col-md-4 mb-3">
                 <div class="card shadow-sm h-100">
                     <div class="card-body text-center">
-                        <h5>Añadir Empleados</h5>
-                        <p class="small text-muted">Registro de personal nuevo con fotografía.</p>
-                        <a href="/registro" class="btn btn-outline-primary w-100">Registrar</a>
+                        <i class="bi bi-person-lines-fill fs-1 text-secondary"></i>
+                        <h5 class="mt-2">Mis Empleados</h5>
+                        <p class="small text-muted">Lista de personal bajo su mando (Solo lectura).</p>
+                        <a href="/mis_empleados" class="btn btn-outline-secondary w-100">Ver Mi Lista</a>
                     </div>
                 </div>
             </div>
@@ -30,18 +49,30 @@
 
             {% if rol in ['guardian', 'maestro'] %}
             <div class="col-md-4 mb-3">
-                <div class="card shadow-sm h-100 border-primary">
+                <div class="card shadow-sm h-100 border-success">
                     <div class="card-body text-center">
-                        <h5 class="text-primary">Escáner de INGRESO</h5>
-                        <a href="/escaneo/ingreso" class="btn btn-primary w-100">Abrir Escáner</a>
+                        <i class="bi bi-box-arrow-in-right fs-1 text-success"></i>
+                        <h5 class="mt-2">Escáner de INGRESO</h5>
+                        <a href="/escaneo/ingreso" class="btn btn-success w-100">Abrir Lector</a>
                     </div>
                 </div>
             </div>
             <div class="col-md-4 mb-3">
                 <div class="card shadow-sm h-100 border-danger">
                     <div class="card-body text-center">
-                        <h5 class="text-danger">Escáner de SALIDA</h5>
-                        <a href="/escaneo/salida" class="btn btn-danger w-100">Abrir Escáner</a>
+                        <i class="bi bi-box-arrow-right fs-1 text-danger"></i>
+                        <h5 class="mt-2">Escáner de SALIDA</h5>
+                        <a href="/escaneo/salida" class="btn btn-danger w-100">Abrir Lector</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card shadow-sm h-100 bg-warning text-dark border-0">
+                    <div class="card-body text-center">
+                        <i class="bi bi-incognito fs-1"></i>
+                        <h5 class="mt-2 fw-bold">Interior Mina</h5>
+                        <p class="small">Ver personal y operadores que faltan salir.</p>
+                        <a href="/control_mina" class="btn btn-dark w-100">Ver Reporte en Vivo</a>
                     </div>
                 </div>
             </div>
@@ -51,7 +82,8 @@
             <div class="col-md-4 mb-3">
                 <div class="card shadow-sm h-100">
                     <div class="card-body text-center">
-                        <h5>Ver Directorio</h5>
+                        <i class="bi bi-journal-text fs-1"></i>
+                        <h5 class="mt-2">Ver Directorio</h5>
                         <p class="small text-muted">Base de datos de personal y fotos.</p>
                         <a href="/lista_empleados" class="btn btn-outline-dark w-100">Ver Personal</a>
                     </div>
@@ -60,9 +92,20 @@
             <div class="col-md-4 mb-3">
                 <div class="card shadow-sm h-100 border-info">
                     <div class="card-body text-center">
-                        <h5 class="text-info">Historial Diario</h5>
+                        <i class="bi bi-clock-history fs-1 text-info"></i>
+                        <h5 class="text-info mt-2">Historial Diario</h5>
                         <p class="small text-muted">Reporte detallado de marcaciones.</p>
                         <a href="/asistencia_log" class="btn btn-info w-100 text-white">Ver Registros</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card shadow-sm h-100 border-success">
+                    <div class="card-body text-center">
+                        <i class="bi bi-person-vcard fs-1 text-success"></i>
+                        <h5 class="text-success mt-2">Validador de Fotos</h5>
+                        <p class="small text-muted">Búsqueda individual para validación de DNI.</p>
+                        <a href="/validar_personal" class="btn btn-outline-success w-100">Validar Personal</a>
                     </div>
                 </div>
             </div>
@@ -70,10 +113,10 @@
 
             {% if rol == 'maestro' %}
             <div class="col-md-4 mb-3">
-                <div class="card shadow-sm h-100 bg-dark text-white">
+                <div class="card shadow-sm h-100 bg-dark text-white border-0">
                     <div class="card-body text-center">
-                        <h5>Dashboard Analítico</h5>
-                        <p class="small text-light">Métricas generales de asistencia.</p>
+                        <i class="bi bi-graph-up-arrow fs-1"></i>
+                        <h5 class="mt-2">Dashboard Analítico</h5>
                         <a href="/reportes" class="btn btn-light w-100">Ver Gráficos</a>
                     </div>
                 </div>
@@ -81,8 +124,8 @@
             <div class="col-md-4 mb-3">
                 <div class="card shadow-sm h-100 border-warning">
                     <div class="card-body text-center">
-                        <h5 class="text-warning">Gestión de Usuarios</h5>
-                        <p class="small text-muted">Control de accesos y roles.</p>
+                        <i class="bi bi-shield-lock fs-1 text-warning"></i>
+                        <h5 class="text-warning mt-2">Gestión de Usuarios</h5>
                         <a href="/gestion_usuarios" class="btn btn-warning w-100 text-dark">Administrar Cuentas</a>
                     </div>
                 </div>
@@ -90,5 +133,7 @@
             {% endif %}
         </div>
     </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
