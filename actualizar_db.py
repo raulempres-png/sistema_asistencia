@@ -1,11 +1,18 @@
 import sqlite3
 
-try:
+def actualizar():
     conn = sqlite3.connect('asistencia.db')
-    # Usamos comillas dobles afuera y simples adentro para no fallar
-    conn.execute("ALTER TABLE empleados ADD COLUMN foto TEXT DEFAULT 'default_user.png'")
+    cursor = conn.cursor()
+    
+    try:
+        # 1. Agregamos la columna para la huella digital de la foto
+        cursor.execute("ALTER TABLE empleados ADD COLUMN hash_foto TEXT")
+        print("✅ Columna 'hash_foto' añadida con éxito.")
+    except sqlite3.OperationalError:
+        print("⚠️ La columna 'hash_foto' ya existía.")
+
     conn.commit()
     conn.close()
-    print("✅ ¡Éxito! Columna 'foto' añadida correctamente.")
-except Exception as e:
-    print(f"❌ Error: {e}")
+
+if __name__ == "__main__":
+    actualizar()
