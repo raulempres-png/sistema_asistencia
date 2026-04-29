@@ -48,7 +48,7 @@ def panel():
     if 'usuario' not in session: return redirect(url_for('index'))
     return render_template('panel.html', rol=session['rol'], usuario=session['usuario'])
 
-# --- REGISTRO CON OJO DIGITAL (DETECCIÓN DE DUPLICADOS) ---
+# --- REGISTRO CON OJO DIGITAL ---
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if 'usuario' not in session or session['rol'] not in ['supervisor', 'maestro']: return redirect(url_for('panel'))
@@ -63,7 +63,6 @@ def registro():
         if 'foto' in request.files:
             file = request.files['foto']
             if file and allowed_file(file.filename):
-                # OJO DIGITAL: Generamos la huella única de la imagen
                 contenido = file.read()
                 hash_actual = hashlib.md5(contenido).hexdigest()
                 file.seek(0) 
@@ -73,7 +72,7 @@ def registro():
                 conn.close()
 
                 if duplicado:
-                    flash(f'⚠️ ERROR: Esta foto ya fue usada para {duplicado["nombre"]} {duplicado["apellido"]}. Use una foto real del nuevo empleado.', 'danger')
+                    flash(f'⚠️ ERROR: Esta foto ya pertenece a {duplicado["nombre"]} {duplicado["apellido"]}.', 'danger')
                     return redirect(url_for('registro'))
 
                 extension = file.filename.rsplit('.', 1)[1].lower()
@@ -92,7 +91,41 @@ def registro():
         return redirect(url_for('registro'))
     return render_template('registro.html', usuario=session['usuario'])
 
-# --- LISTA DE CONSULTA PARA SUPERVISORES (MIS EMPLEADOS) ---
+# --- NUEVA RUTA: ACTUALIZAR SOLO LA FOTO ---
+@app.route('/actualizar_foto/<dni>', methods=['POST'])
+def actualizar_foto(dni):
+    if 'usuario' not in session or session['rol'] != 'maestro': return redirect(url_for('panel'))
+    
+    if 'foto' in request.files:
+        file = request.files['foto']
+        if file and allowed_file(file.filename):
+            # Calculamos hash para el Ojo Digital
+            contenido = file.read()
+            hash_nuevo = hashlib.md5(contenido).hexdigest()
+            file.seek(0)
+
+            conn = get_db_connection()
+            # Verificamos si la foto ya la tiene OTRO empleado
+            duplicado = conn.execute('SELECT nombre, apellido FROM empleados WHERE hash_foto = ? AND dni != ?', (hash_nuevo, dni)).fetchone()
+            
+            if duplicado:
+                conn.close()
+                flash(f'⚠️ ERROR: Esa foto ya la tiene {duplicado["nombre"]} {duplicado["apellido"]}. No se actualizó.', 'danger')
+                return redirect(url_for('lista_empleados'))
+
+            # Guardamos el archivo físico
+            extension = file.filename.rsplit('.', 1)[1].lower()
+            filename = secure_filename(f"{dni}.{extension}")
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
+            # Actualizamos base de datos
+            conn.execute('UPDATE empleados SET foto = ?, hash_foto = ? WHERE dni = ?', (filename, hash_nuevo, dni))
+            conn.commit()
+            conn.close()
+            flash('Foto actualizada correctamente', 'success')
+    
+    return redirect(url_for('lista_empleados'))
+
 @app.route('/mis_empleados')
 def mis_empleados():
     if 'usuario' not in session or session['rol'] != 'supervisor': return redirect(url_for('panel'))
@@ -101,7 +134,6 @@ def mis_empleados():
     conn.close()
     return render_template('supervisor_lista.html', empleados=empleados)
 
-# --- REPORTE DE SEGURIDAD: PERSONAL EN INTERIOR MINA ---
 @app.route('/control_mina')
 def control_mina():
     if 'usuario' not in session or session['rol'] not in ['guardian', 'maestro', 'admin_corp']: return redirect(url_for('panel'))
@@ -117,7 +149,6 @@ def control_mina():
     conn.close()
     return render_template('control_mina.html', dentro=dentro)
 
-# --- VALIDADOR INDIVIDUAL (PARA EMPRESAS / ADMIN CORP) ---
 @app.route('/validar_personal', methods=['GET', 'POST'])
 def validar_personal():
     if 'usuario' not in session or session['rol'] not in ['admin_corp', 'maestro']: return redirect(url_for('panel'))
@@ -127,7 +158,6 @@ def validar_personal():
         conn = get_db_connection()
         empleado = conn.execute('SELECT * FROM empleados WHERE dni = ?', (dni,)).fetchone()
         conn.close()
-        if not empleado: flash('DNI no encontrado', 'warning')
     return render_template('validar_dni.html', empleado=empleado)
 
 @app.route('/escaneo/<tipo>', methods=['GET', 'POST'])
@@ -151,14 +181,9 @@ def escaneo(tipo):
         conn.close()
     return render_template('escaneo.html', tipo=tipo.upper(), mensaje=mensaje, estado_alerta=estado_alerta, empleado=empleado_datos)
 
-# --- DIRECTORIO MAESTRO (AHORA SOLO PARA EL ROL MAESTRO) ---
 @app.route('/lista_empleados')
 def lista_empleados():
-    if 'usuario' not in session: return redirect(url_for('index'))
-    # Bloqueamos el acceso al Administrador de Corporación aquí
-    if session.get('rol') != 'maestro': 
-        return redirect(url_for('panel'))
-        
+    if 'usuario' not in session or session.get('rol') != 'maestro': return redirect(url_for('panel'))
     sup_filtro = request.args.get('supervisor')
     conn = get_db_connection()
     lista_sups = conn.execute('SELECT s.usuario, COUNT(e.dni) as cantidad FROM supervisores s LEFT JOIN empleados e ON s.id = e.supervisor_id GROUP BY s.usuario ORDER BY s.usuario ASC').fetchall()
@@ -177,7 +202,7 @@ def eliminar_empleado(dni):
     conn.execute('DELETE FROM empleados WHERE dni = ?', (dni,))
     conn.commit()
     conn.close()
-    flash('Empleado e historial eliminados', 'warning')
+    flash('Empleado eliminado', 'warning')
     return redirect(url_for('lista_empleados'))
 
 @app.route('/asistencia_log')
@@ -226,7 +251,7 @@ def cambiar_password(id):
     conn.execute('UPDATE supervisores SET password = ? WHERE id = ?', (nueva_p, id))
     conn.commit()
     conn.close()
-    flash('Contraseña actualizada correctamente', 'success')
+    flash('Contraseña actualizada', 'success')
     return redirect(url_for('gestion_usuarios'))
 
 @app.route('/eliminar_usuario/<int:id>', methods=['POST'])

@@ -3,21 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Directorio Maestro | Trexcel</title>
+    <title>Directorio Maestro | Bocamina Balcón de Oro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     
     <style>
-        /* Estilo para el efecto de zoom elegante */
         .contenedor-foto {
             width: 50px;
             height: 50px;
-            overflow: visible; /* Permite que el zoom no se corte */
+            overflow: visible;
             display: flex;
             align-items: center;
             justify-content: center;
         }
-
         .foto-maestra {
             width: 50px;
             height: 50px;
@@ -29,53 +27,48 @@
             position: relative;
             z-index: 1;
         }
-
-        /* Efecto al pasar el cursor (hover) */
         .foto-maestra:hover {
-            transform: scale(4); /* Agranda la imagen 4 veces */
-            z-index: 1000; /* Asegura que se vea por encima de todo */
-            border-radius: 8px; /* Cambia a forma cuadrada suave al agrandar */
+            transform: scale(4);
+            z-index: 1000;
+            border-radius: 8px;
             box-shadow: 0 10px 20px rgba(0,0,0,0.4);
             border-color: #0d6efd;
         }
-
-        /* Evitar que la tabla oculte el zoom */
-        .table-responsive {
-            overflow: visible !important;
-        }
-        
-        td, th {
-            vertical-align: middle !important;
-        }
+        .table-responsive { overflow: visible !important; }
+        td, th { vertical-align: middle !important; }
     </style>
 </head>
 <body class="bg-light">
     <div class="container mt-5">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="fw-bold text-dark mb-0">Directorio Maestro de Personal</h2>
-            <div class="badge bg-dark fs-6 p-2">
-                Total en sistema: {{ empleados|length }} registros
-            </div>
+            <div class="badge bg-dark fs-6 p-2">Total: {{ empleados|length }} registros</div>
         </div>
         
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-body p-4">
                 <form method="GET" action="/lista_empleados" class="row g-3 align-items-end">
                     <div class="col-md-9">
-                        <label class="form-label fw-bold text-secondary">Filtrar por Supervisor Asignado:</label>
+                        <label class="form-label fw-bold text-secondary">Filtrar por Supervisor:</label>
                         <select name="supervisor" class="form-select form-select-lg">
-                            <option value="">-- Ver todos los registros del sistema --</option>
+                            <option value="">-- Ver todos --</option>
                             {% for s in supervisores %}
                             <option value="{{ s.usuario }}" {% if s.usuario == sup_sel %}selected{% endif %}>
-                                {{ s.usuario }} ({{ s.cantidad }} empleados a cargo)
+                                {{ s.usuario }} ({{ s.cantidad }} empleados)
                             </option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold">
-                            <i class="bi bi-funnel"></i> Aplicar Filtro
-                        </button>
+                        <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold">Filtrar</button>
                     </div>
                 </form>
             </div>
@@ -87,13 +80,11 @@
                     <thead class="table-dark">
                         <tr>
                             <th class="ps-3 text-center">Foto</th>
-                            <th>DNI / Código</th>
+                            <th>DNI</th>
                             <th>Empleado</th>
-                            <th>Empresa Contratista</th>
-                            <th>Responsable de Registro</th>
-                            {% if rol == 'maestro' %}
+                            <th>Contrata</th>
+                            <th>Registro</th>
                             <th class="text-center">Acciones</th>
-                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -101,9 +92,7 @@
                         <tr>
                             <td class="text-center" style="width: 80px;">
                                 <div class="contenedor-foto mx-auto">
-                                    <img src="{{ url_for('static', filename='fotos_empleados/' + e['foto']) }}" 
-                                         class="foto-maestra" 
-                                         alt="Foto">
+                                    <img src="{{ url_for('static', filename='fotos_empleados/' + e['foto']) }}" class="foto-maestra">
                                 </div>
                             </td>
                             <td class="fw-bold text-primary">{{ e['dni'] }}</td>
@@ -111,30 +100,26 @@
                                 <div class="fw-bold text-uppercase">{{ e['apellido'] }}, {{ e['nombre'] }}</div>
                                 <small class="text-muted">{{ e['categoria'] }}</small>
                             </td>
-                            <td>
-                                <span class="badge bg-info text-dark px-3 py-2">{{ e['contrata'] }}</span>
-                            </td>
-                            <td>
-                                <span class="text-muted"><i class="bi bi-person-badge"></i> {{ e['supervisor'] }}</span>
-                            </td>
+                            <td><span class="badge bg-info text-dark px-3 py-2">{{ e['contrata'] }}</span></td>
+                            <td><span class="text-muted">{{ e['supervisor'] }}</span></td>
                             
-                            {% if rol == 'maestro' %}
                             <td class="text-center">
-                                <form action="/eliminar_empleado/{{ e['dni'] }}" method="POST" onsubmit="return confirm('¿Está seguro de eliminar a este empleado?');">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                                        <i class="bi bi-trash"></i> Eliminar
-                                    </button>
-                                </form>
+                                <div class="d-flex gap-2 justify-content-center">
+                                    <form action="/actualizar_foto/{{ e['dni'] }}" method="POST" enctype="multipart/form-data">
+                                        <label class="btn btn-sm btn-outline-primary mb-0" title="Actualizar Foto">
+                                            <i class="bi bi-camera"></i>
+                                            <input type="file" name="foto" style="display: none;" onchange="this.form.submit()">
+                                        </label>
+                                    </form>
+
+                                    <form action="/eliminar_empleado/{{ e['dni'] }}" method="POST" onsubmit="return confirm('¿Eliminar empleado?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </div>
                             </td>
-                            {% endif %}
                         </tr>
                         {% else %}
-                        <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">
-                                <i class="bi bi-info-circle fs-2"></i><br>
-                                No se encontraron empleados registrados.
-                            </td>
-                        </tr>
+                        <tr><td colspan="6" class="text-center py-5">No hay registros.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -142,17 +127,10 @@
         </div>
 
         <div class="mt-4 d-flex justify-content-between">
-            <a href="/panel" class="btn btn-secondary px-4">
-                <i class="bi bi-arrow-left"></i> Volver al Panel
-            </a>
-            {% if sup_sel %}
-            <a href="/lista_empleados" class="btn btn-outline-secondary">
-                <i class="bi bi-x-circle"></i> Limpiar Filtros
-            </a>
-            {% endif %}
+            <a href="/panel" class="btn btn-secondary">Volver al Panel</a>
+            {% if sup_sel %}<a href="/lista_empleados" class="btn btn-outline-secondary">Limpiar</a>{% endif %}
         </div>
     </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
