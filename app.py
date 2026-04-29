@@ -151,10 +151,14 @@ def escaneo(tipo):
         conn.close()
     return render_template('escaneo.html', tipo=tipo.upper(), mensaje=mensaje, estado_alerta=estado_alerta, empleado=empleado_datos)
 
+# --- DIRECTORIO MAESTRO (AHORA SOLO PARA EL ROL MAESTRO) ---
 @app.route('/lista_empleados')
 def lista_empleados():
     if 'usuario' not in session: return redirect(url_for('index'))
-    if session.get('rol') not in ['maestro', 'admin_corp']: return redirect(url_for('panel'))
+    # Bloqueamos el acceso al Administrador de Corporación aquí
+    if session.get('rol') != 'maestro': 
+        return redirect(url_for('panel'))
+        
     sup_filtro = request.args.get('supervisor')
     conn = get_db_connection()
     lista_sups = conn.execute('SELECT s.usuario, COUNT(e.dni) as cantidad FROM supervisores s LEFT JOIN empleados e ON s.id = e.supervisor_id GROUP BY s.usuario ORDER BY s.usuario ASC').fetchall()

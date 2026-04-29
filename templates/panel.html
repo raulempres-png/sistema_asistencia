@@ -83,21 +83,26 @@
             </div>
             {% endif %}
 
-            {% if rol in ['maestro', 'admin_corp'] %}
+            {% if rol == 'maestro' %}
             <div class="col-12 col-md-4 mb-3">
                 <div class="card shadow-sm h-100">
                     <div class="card-body text-center">
                         <i class="bi bi-journal-text fs-1"></i>
-                        <h5 class="mt-2">Ver Directorio</h5>
+                        <h5 class="mt-2 text-dark">Ver Directorio</h5>
+                        <p class="small text-muted">Base de datos completa de personal.</p>
                         <a href="/lista_empleados" class="btn btn-outline-dark w-100 py-2">Ver Personal</a>
                     </div>
                 </div>
             </div>
+            {% endif %}
+
+            {% if rol in ['maestro', 'admin_corp'] %}
             <div class="col-12 col-md-4 mb-3">
                 <div class="card shadow-sm h-100 border-info">
                     <div class="card-body text-center">
                         <i class="bi bi-clock-history fs-1 text-info"></i>
                         <h5 class="text-info mt-2">Historial Diario</h5>
+                        <p class="small text-muted">Reporte detallado de marcaciones.</p>
                         <a href="/asistencia_log" class="btn btn-info w-100 text-white py-2">Ver Registros</a>
                     </div>
                 </div>
@@ -107,6 +112,7 @@
                     <div class="card-body text-center">
                         <i class="bi bi-person-vcard fs-1 text-success"></i>
                         <h5 class="text-success mt-2">Validador de Fotos</h5>
+                        <p class="small text-muted">Búsqueda individual para validación de DNI.</p>
                         <a href="/validar_personal" class="btn btn-outline-success w-100 py-2">Validar Personal</a>
                     </div>
                 </div>
