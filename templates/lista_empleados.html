@@ -92,7 +92,7 @@
                         <tr>
                             <td class="text-center" style="width: 80px;">
                                 <div class="contenedor-foto mx-auto">
-                                    <img src="{{ url_for('static', filename='fotos_empleados/' + e['foto']) }}" class="foto-maestra">
+                                    <img src="{{ url_for('static', filename='fotos_empleados/' + e['foto']) }}?v={{ e['hash_foto'] }}" class="foto-maestra">
                                 </div>
                             </td>
                             <td class="fw-bold text-primary">{{ e['dni'] }}</td>
